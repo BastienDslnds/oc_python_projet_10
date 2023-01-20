@@ -53,10 +53,10 @@ class IssueListSerializer(serializers.ModelSerializer):
         fields = [
             'id',
             'title',
-            'desc',
+            'description',
             'tag',
             'priority',
-            'project_id',
+            'project',
             'status',
             'author_user',
             'assignee_user',

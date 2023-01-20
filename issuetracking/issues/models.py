@@ -41,12 +41,12 @@ class Issue(models.Model):
     title = models.CharField(max_length=200)
     description = models.CharField(max_length=1000)
     tag = models.CharField(
-        max_length=15, choices=PRIORITY_CHOICES, verbose_name='tag'
+        max_length=15, choices=TAG_CHOICES, verbose_name='tag'
     )
     priority = models.CharField(
         max_length=10, choices=PRIORITY_CHOICES, verbose_name='priority'
     )
-    project_id = models.ForeignKey(
+    project = models.ForeignKey(
         to=Project, on_delete=models.CASCADE, related_name='issues'
     )
     status = models.CharField(
