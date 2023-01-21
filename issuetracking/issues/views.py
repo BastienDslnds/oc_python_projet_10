@@ -16,8 +16,8 @@ from .serializers import (
 )
 from .models import Project, Contributor, Issue, Comment
 from .permissions import (
-    IsAuthorOrReadOnly,
-    IsProjectContributorOrAuthor,
+    IsAuthor,
+    IsProjectContributor,
 )
 
 
@@ -39,11 +39,12 @@ class ProjectViewset(MultipleSerializerMixin, ModelViewSet):
     serializer_class = ProjectListSerializer
     detail_serializer_class = ProjectDetailSerializer
 
-    permission_classes = [IsAuthenticated, IsAuthorOrReadOnly]
+    permission_classes = [IsAuthenticated, IsAuthor]
 
     def get_queryset(self):
         user = self.request.user
-        # un utilisateur ne doit pas être autorisé à accéder à un projet pour lequel il n'est pas ajouté en tant que contributeur
+        # un utilisateur ne doit pas être autorisé à accéder à un projet
+        # pour lequel il n'est pas ajouté en tant que contributeur
         return Project.objects.filter(
             Q(author_user=user.id) | Q(contributors__user_id=user.id)
         )
@@ -83,18 +84,17 @@ class ContributorViewset(MultipleSerializerMixin, ModelViewSet):
     serializer_class = ContributorSerializer
 
     permission_classes = [
-        IsAuthorOrReadOnly,
+        IsAuthor,
     ]
 
     def get_queryset(self):
         return Contributor.objects.filter(project=self.kwargs['project_pk'])
 
     def create(self, request, *args, **kwargs):
+        project = get_object_or_404(Project, pk=self.kwargs['project_pk'])
+        self.check_object_permissions(request, project)
         contributor = request.data
         contributor['project'] = self.kwargs['project_pk']
-        project_id = self.kwargs['project_pk']
-        project = get_object_or_404(Project, pk=project_id)
-        self.check_object_permissions(request, project)
         if not (
             Contributor.objects.filter(
                 user=request.user, project=self.kwargs['project_pk']
@@ -132,15 +132,9 @@ class IssueViewset(MultipleSerializerMixin, ModelViewSet):
     serializer_class = IssueListSerializer
     detail_serializer_class = IssueDetailSerializer
 
-    permission_classes = [
-        IsAuthenticated,
-        IsAuthorOrReadOnly,
-        IsProjectContributorOrAuthor,
-    ]
+    permission_classes = [IsAuthenticated, IsAuthor, IsProjectContributor]
 
     def get_queryset(self):
-        project = get_object_or_404(Project, pk=self.kwargs['project_pk'])
-        self.check_object_permissions(self.request, project)
         # Les problèmes du projet doivent être visibles par tous les contributeurs et l'auteur
         contributor_projects = Project.objects.filter(
             Q(contributors__user_id=self.request.user)
@@ -180,9 +174,8 @@ class IssueViewset(MultipleSerializerMixin, ModelViewSet):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def destroy(self, request, *args, **kwargs):
-        project = get_object_or_404(Project, pk=self.kwargs['project_pk'])
-        self.check_object_permissions(request, project)
         issue = get_object_or_404(Issue, pk=self.kwargs['pk'])
+        self.check_object_permissions(request, issue)
         issue.delete()
         return Response(
             {'message': 'The issue has been deleted'},
@@ -194,11 +187,7 @@ class CommentViewset(MultipleSerializerMixin, ModelViewSet):
 
     serializer_class = CommentSerializer
 
-    permission_classes = [
-        IsAuthenticated,
-        IsAuthorOrReadOnly,
-        IsProjectContributorOrAuthor,
-    ]
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         # contributor_projects = Project.objects.filter(
@@ -220,13 +209,12 @@ class CommentViewset(MultipleSerializerMixin, ModelViewSet):
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     def update(self, request, *args, **kwargs):
-        issue = get_object_or_404(Issue, pk=self.kwargs['issue_pk'])
-        self.check_object_permissions(request, issue)
+        comment = get_object_or_404(Comment, pk=self.kwargs['pk'])
+        self.check_object_permissions(request, comment)
         data = request.data
         data['issue'] = self.kwargs['issue_pk']
         data['author_user'] = request.user.id
 
-        comment = get_object_or_404(Comment, pk=self.kwargs['pk'])
         serializer = CommentSerializer(comment, data=data)
         serializer.is_valid(raise_exception=True)
         serializer.save()
@@ -234,6 +222,7 @@ class CommentViewset(MultipleSerializerMixin, ModelViewSet):
 
     def destroy(self, request, *args, **kwargs):
         comment = get_object_or_404(Comment, pk=self.kwargs['pk'])
+        self.check_object_permissions(request, comment)
         comment.delete()
         return Response(
             {'message': 'The comment has been deleted'},
