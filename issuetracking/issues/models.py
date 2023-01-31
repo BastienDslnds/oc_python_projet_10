@@ -24,8 +24,8 @@ class Issue(models.Model):
     # issue_id ?
 
     PRIORITY_CHOICES = (
-        ('F', 'FAIBLE'),
-        ('M', 'MOYENNE'),
+        ('FAIBLE', 'FAIBLE'),
+        ('MOYENNE', 'MOYENNE'),
         ('ELEVEE', 'ELEVEE'),
     )
     STATUS_CHOICES = (
@@ -34,9 +34,9 @@ class Issue(models.Model):
         ('Terminé', 'Terminé'),
     )
     TAG_CHOICES = (
-        ('B', 'BUG'),
-        ('A', 'AMELIORATION'),
-        ('T', 'TACHE'),
+        ('BUG', 'BUG'),
+        ('AMELIORATION', 'AMELIORATION'),
+        ('TACHE', 'TACHE'),
     )
     title = models.CharField(max_length=200)
     description = models.CharField(max_length=1000)
@@ -78,10 +78,6 @@ class Comment(models.Model):
 
 class Contributor(models.Model):
 
-    PERMISSION_CHOICES = (
-        ('permission a', 'permission a'),
-        ('permission b', 'permission b'),
-    )
     user = models.ForeignKey(
         to=settings.AUTH_USER_MODEL, on_delete=models.CASCADE
     )
@@ -89,6 +85,6 @@ class Contributor(models.Model):
         to=Project, on_delete=models.CASCADE, related_name='contributors'
     )
     permission = models.CharField(
-        max_length=20, choices=PERMISSION_CHOICES, verbose_name='permission'
+        max_length=20, null=True, blank=True, verbose_name='permission'
     )
     role = models.CharField(max_length=20)

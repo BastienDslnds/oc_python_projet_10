@@ -39,7 +39,7 @@ class ProjectViewset(MultipleSerializerMixin, ModelViewSet):
     serializer_class = ProjectListSerializer
     detail_serializer_class = ProjectDetailSerializer
 
-    permission_classes = [IsAuthenticated, IsAuthor]
+    permission_classes = [IsAuthor]
 
     def get_queryset(self):
         user = self.request.user
@@ -132,7 +132,7 @@ class IssueViewset(MultipleSerializerMixin, ModelViewSet):
     serializer_class = IssueListSerializer
     detail_serializer_class = IssueDetailSerializer
 
-    permission_classes = [IsAuthenticated, IsAuthor, IsProjectContributor]
+    permission_classes = [IsAuthor, IsProjectContributor]
 
     def get_queryset(self):
         # Les problèmes du projet doivent être visibles par tous les contributeurs et l'auteur
@@ -141,9 +141,17 @@ class IssueViewset(MultipleSerializerMixin, ModelViewSet):
             | Q(author_user=self.request.user)
         )
         return Issue.objects.filter(
-            project_id=self.kwargs['project_pk'],
+            project=self.kwargs[
+                'project_pk'
+            ],  # project_id ou project ? Peu importe je pense
             project__in=contributor_projects,
         )
+
+    def get_permissions(self):
+        if self.request.method in ['POST']:
+            return [IsProjectContributor()]
+        else:
+            return [IsAuthor()]
 
     def create(self, request, *args, **kwargs):
         project = get_object_or_404(Project, pk=self.kwargs['project_pk'])
@@ -187,26 +195,52 @@ class CommentViewset(MultipleSerializerMixin, ModelViewSet):
 
     serializer_class = CommentSerializer
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsProjectContributor]
+
+    def get_permissions(self):
+        if self.request.method in ['POST']:
+            return [IsProjectContributor()]
+        else:
+            return [IsAuthor()]
+
+    def is_issue_exist_on_project(self):
+        is_issue_exist = Issue.objects.filter(
+            id=self.kwargs['issue_pk'], project=self.kwargs['project_pk']
+        )
+        if is_issue_exist:
+            return True
+        return False
 
     def get_queryset(self):
-        # contributor_projects = Project.objects.filter(
-        #     Q(contributors__user_id=self.request.user)
-        #     | Q(author_user=self.request.user)
-        # )
-        return Comment.objects.filter(issue_id=self.kwargs['issue_pk'])
+        contributor_projects = Project.objects.filter(
+            Q(contributors__user_id=self.request.user)
+            | Q(author_user=self.request.user)
+        )
+        # il faut que le projet de l'issue reliée aux commentaires soient dans les projets accessibles par le user authentifié
+        return Comment.objects.filter(
+            issue_id=self.kwargs['issue_pk'],
+            issue__in=Issue.objects.filter(project__in=contributor_projects),
+            issue__project_id=self.kwargs['project_pk'],
+        )
 
     def create(self, request, *args, **kwargs):
-        project = get_object_or_404(Project, pk=self.kwargs['project_pk'])
-        self.check_object_permissions(request, project)
-        comment = request.data
-        comment['issue'] = self.kwargs['issue_pk']
-        comment['author_user'] = request.user.id
+        is_issue_exist = self.is_issue_exist_on_project()
+        if not is_issue_exist:
+            return Response(
+                {'message': "The issue doesn't exist on this project"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        else:
+            project = get_object_or_404(Project, pk=self.kwargs['project_pk'])
+            self.check_object_permissions(request, project)
+            comment = request.data
+            comment['issue'] = self.kwargs['issue_pk']
+            comment['author_user'] = request.user.id
+            serializer = CommentSerializer(data=comment)
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
 
-        serializer = CommentSerializer(data=comment)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     def update(self, request, *args, **kwargs):
         comment = get_object_or_404(Comment, pk=self.kwargs['pk'])
