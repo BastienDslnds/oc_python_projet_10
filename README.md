@@ -1,5 +1,5 @@
 # Développement d'une API RESTFul
-API permettant de remonter et suivre des problèmes techniques.
+API permettant de remonter et suivre des problèmes techniques sur des projets.
 
 ## Description
 
@@ -34,7 +34,7 @@ L'API a pour but de :
 
 ### Documentation de l'API
 
-* Lien vers la documentation Postman de l'API:  
+* Lien vers la documentation Postman de l'API: https://documenter.getpostman.com/view/22963855/2s8ZDYZ2md 
 
 
 ## Auteurs
