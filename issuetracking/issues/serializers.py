@@ -12,9 +12,6 @@ class ProjectListSerializer(serializers.ModelSerializer):
             'type',
             'author_user',
         ]
-        # extra_kwargs = {
-        #     'author_user': {'required': False, 'allow_blank': True},
-        # }
 
 
 class ProjectDetailSerializer(serializers.ModelSerializer):

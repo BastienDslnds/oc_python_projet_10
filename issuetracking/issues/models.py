@@ -21,7 +21,6 @@ class Project(models.Model):
 
 
 class Issue(models.Model):
-    # issue_id ?
 
     PRIORITY_CHOICES = (
         ('FAIBLE', 'FAIBLE'),

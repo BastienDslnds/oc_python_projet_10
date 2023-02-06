@@ -83,9 +83,7 @@ class ContributorViewset(MultipleSerializerMixin, ModelViewSet):
 
     serializer_class = ContributorSerializer
 
-    permission_classes = [
-        IsAuthor,
-    ]
+    permission_classes = [IsAuthor]
 
     def get_queryset(self):
         return Contributor.objects.filter(project=self.kwargs['project_pk'])
@@ -135,15 +133,14 @@ class IssueViewset(MultipleSerializerMixin, ModelViewSet):
     permission_classes = [IsAuthor, IsProjectContributor]
 
     def get_queryset(self):
-        # Les problèmes du projet doivent être visibles par tous les contributeurs et l'auteur
+        # Les problèmes du projet doivent être visibles
+        # par tous les contributeurs et l'auteur
         contributor_projects = Project.objects.filter(
             Q(contributors__user_id=self.request.user)
             | Q(author_user=self.request.user)
         )
         return Issue.objects.filter(
-            project=self.kwargs[
-                'project_pk'
-            ],  # project_id ou project ? Peu importe je pense
+            project=self.kwargs['project_pk'],
             project__in=contributor_projects,
         )
 
@@ -160,7 +157,8 @@ class IssueViewset(MultipleSerializerMixin, ModelViewSet):
         issue['project'] = self.kwargs['project_pk']
         issue['author_user'] = request.user.id
 
-        # par défaut, si l'utilisateur ne renseigne pas l'assignee alors il est en assignee user
+        # Si l'utilisateur ne renseigne pas l'assignee
+        # alors il est en assignee user par défaut
         if not issue.get('assignee_user'):
             issue['assignee_user'] = request.user.id
         serializer = IssueListSerializer(data=issue)
@@ -216,7 +214,8 @@ class CommentViewset(MultipleSerializerMixin, ModelViewSet):
             Q(contributors__user_id=self.request.user)
             | Q(author_user=self.request.user)
         )
-        # il faut que le projet de l'issue reliée aux commentaires soient dans les projets accessibles par le user authentifié
+        # il faut que le projet de l'issue reliée aux commentaires
+        # soit dans les projets accessibles par le user authentifié
         return Comment.objects.filter(
             issue_id=self.kwargs['issue_pk'],
             issue__in=Issue.objects.filter(project__in=contributor_projects),
