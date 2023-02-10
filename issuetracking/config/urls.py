@@ -16,10 +16,7 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 from rest_framework_nested import routers
-from rest_framework_simplejwt.views import (
-    TokenObtainPairView,
-    TokenRefreshView,
-)
+from rest_framework_simplejwt.views import TokenRefreshView
 
 from users.views import signup, login
 from issues.views import (
@@ -54,9 +51,6 @@ urlpatterns = [
     path("api/", include(router.urls)),
     path("api/", include(project_router.urls)),
     path("api/", include(project_issues_router.urls)),
-    path(
-        'api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'
-    ),
     path(
         'api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'
     ),

@@ -2,7 +2,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
-
+from rest_framework_simplejwt.tokens import RefreshToken
 from users.models import User
 from .serializers import SignupSerializer, UserSerializer
 
@@ -40,19 +40,16 @@ def signup(request):
 
 
 @api_view(['POST'])
-@permission_classes(
-    [
-        IsAuthenticated,
-    ]
-)
 def login(request):
     email = request.data['email']
     password = request.data['password']
     if User.objects.filter(email=email).exists():
         user = User.objects.get(email=email)
         if user.check_password(password):
+            refresh = RefreshToken.for_user(user)
             return Response(
-                UserSerializer(instance=user).data, status=status.HTTP_200_OK
+                {"refresh": str(refresh), "access": str(refresh.access_token)},
+                status=status.HTTP_200_OK,
             )
         else:
             return Response(
